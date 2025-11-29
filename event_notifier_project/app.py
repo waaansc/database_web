@@ -6,8 +6,9 @@ from flask_sqlalchemy import SQLAlchemy
 # Flask 앱 초기 설정
 app = Flask(__name__)
 
-#SQLite 데이터베이스 파일 경로 설정
-app.config['SQLALCHEMY_DATABASE_URL'] = 'sqlite://event_db.sqlite'
+# SQLite 데이터베이스 파일 경로 설정 (앱 디렉터리 기준 절대 경로로 지정)
+db_path = os.path.join(app.root_path, 'event_db.sqlite')
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 #SQLAlchemy 객체 초기화
@@ -51,11 +52,9 @@ class Event(db.Model):
     def __repr__(self):
         return f'<Event {self.title}>'
 
-# --- 3. 초기 데이터 설정 및 DB 생성 함수 ---
+# --- 초기 데이터 설정 및 DB 생성 함수 ---
 def init_db():
     # 데이터베이스 파일이 이미 존재하는지 확인하고, 없다면 새로 생성 및 초기화합니다.
-    db_path = os.path.join(app.root_path, 'event_db.sqlite')
-    
     if not os.path.exists(db_path):
         print("데이터베이스 파일을 새로 생성합니다.")
         with app.app_context():
@@ -75,7 +74,7 @@ def init_db():
     else:
         print("기존 데이터베이스 파일을 사용합니다.")
 
-# --- 4. Flask 라우팅 (웹페이지 URL 처리) 설정 ---
+# --- Flask 라우팅 (웹페이지 URL 처리) 설정 ---
 
 # 메인 페이지 (CRUD의 Read 기능: 이벤트 목록 조회)
 @app.route('/')
