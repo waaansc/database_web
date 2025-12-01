@@ -1,12 +1,12 @@
 import os
 from datetime import datetime
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, abort
 from flask_sqlalchemy import SQLAlchemy
 
 # --- 1. Flask 앱 초기 설정 및 DB 경로 설정 ---
 app = Flask(__name__)
 
-# SQLite 데이터베이스 파일 경로 설정 (DB 파일 위치 지정)
+# SQLite 데이터베이스 파일 경로 설정
 db_path = os.path.join(app.root_path, 'event_db.sqlite')
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -14,7 +14,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # SQLAlchemy 객체 초기화
 db = SQLAlchemy()
 
-# 명시적으로 Flask 앱에 DB 설정 연결 (이전 RuntimeError 해결을 위한 방식)
+# 명시적으로 Flask 앱에 DB 설정 연결 (오류 방지)
 with app.app_context():
     db.init_app(app)
 
@@ -42,14 +42,14 @@ class Event(db.Model):
     def __repr__(self):
         return f'<Event {self.title}>'
 
-# --- 3. 초기 데이터 설정 및 DB 생성 함수 ---
+# --- 3. 초기 DB 생성 및 데이터 설정 함수 ---
 def init_db():
     if not os.path.exists(db_path):
         print("데이터베이스 파일을 새로 생성합니다.")
         with app.app_context():
             db.create_all()
 
-            # 초기 카테고리 데이터 삽입
+            # 초기 카테고리 데이터 삽입 (미리 넣어두기로 한 데이터)
             categories = ['축제', '팝업 스토어', '할인 행사', '전시/공연']
             for name in categories:
                 if not Category.query.filter_by(category_name=name).first():
@@ -63,65 +63,109 @@ def init_db():
 
 # --- 4. Flask 라우팅 (웹페이지 URL 처리) 설정 ---
 
-# 메인 페이지 (CRUD의 Read 기능: 이벤트 목록 조회)
+# 메인 페이지 (CRUD의 Read 기능: 날짜 기반 필터링 조회)
 @app.route('/')
 def event_list():
     categories = Category.query.all()
-    # 날짜 기반 동적 쿼리 : 오늘 날짜를 기준으로 종료일이 오늘보다 크거나 같은 이벤트만 조회
     today = datetime.today().date()
+    
+    # DB 활용 핵심: 오늘 날짜(today)를 기준으로 종료일이 오늘이거나 미래인 이벤트만 조회
+    # SQL 쿼리: SELECT * FROM event WHERE end_date >= TODAY ORDER BY start_date ASC
     events = Event.query.filter(
-        Event.end_date >= today # 종료일이 오늘이거나 미래인 이벤트
-    ).order_by(
-        Event.start_date.asc() # 사직일이 빠른 순서대로 정렬
-    ).all()
+        Event.end_date >= today
+    ).order_by(Event.start_date.asc()).all() 
+    
+    return render_template('index.html', events=events, categories=categories, today=today)
 
-    #index.html 템플릿에 데이터 전달
-    return render_template('index.html', events = events, categories = categories)
 
 # 이벤트 등록 페이지 (CRUD의 Create 기능)
 @app.route('/new', methods=['GET', 'POST'])
 def event_create():
-    # 등록 폼에서 사용할 카테고리 목록을 DB에서 가져옵니다.
     categories = Category.query.all()
     
-    # GET 요청: 폼 페이지를 보여줍니다.
     if request.method == 'GET':
         return render_template('create.html', categories=categories)
 
-    # POST 요청: 폼 데이터를 받아 DB에 저장합니다.
     elif request.method == 'POST':
         try:
-            # 1. 폼 데이터 가져오기 및 날짜 형식 변환
             title = request.form['title']
-            description = request.form['description']
+            description = request.form.get('description', '')
             location = request.form['location']
-            # HTML 폼에서 받은 'YYYY-MM-DD' 문자열을 Python의 datetime.date 객체로 변환합니다.
             start_date = datetime.strptime(request.form['start_date'], '%Y-%m-%d').date()
             end_date = datetime.strptime(request.form['end_date'], '%Y-%m-%d').date()
             category_id = int(request.form['category_id'])
 
-            # 2. 새로운 Event 객체 생성 및 DB에 추가 (SQL INSERT 준비)
             new_event = Event(
-                title=title,
-                description=description,
-                location=location,
-                start_date=start_date,
-                end_date=end_date,
-                category_id=category_id
+                title=title, description=description, location=location,
+                start_date=start_date, end_date=end_date, category_id=category_id
             )
             db.session.add(new_event)
             db.session.commit() # SQL INSERT 실행
 
-            # 등록 후 메인 페이지로 이동합니다.
             return redirect(url_for('event_list'))
         
         except Exception as e:
-            # 오류 발생 시 (예: 날짜 형식이 잘못되었을 때)
+            db.session.rollback()
             return f"이벤트 등록 오류 발생: {e}", 500
+
+# 이벤트 상세/수정 페이지 (CRUD의 Read One 및 Update 기능)
+@app.route('/<int:event_id>', methods=['GET', 'POST'])
+def event_detail(event_id):
+    # event_id를 사용하여 DB에서 해당 이벤트 레코드를 조회 (CRUD-R)
+    event = Event.query.get_or_404(event_id)
+    categories = Category.query.all()
+    
+    if request.method == 'GET':
+        # GET 요청 시 상세 정보와 수정 폼이 포함된 detail.html을 보여줌
+        return render_template('detail.html', event=event, categories=categories)
+
+    elif request.method == 'POST':
+        # POST 요청 시 이벤트 정보를 수정합니다. (CRUD-U)
+        try:
+            # 폼에서 수정된 데이터 가져오기
+            event.title = request.form['title']
+            event.description = request.form.get('description', '')
+            event.location = request.form['location']
+            
+            # 날짜 형식 변환 및 업데이트
+            event.start_date = datetime.strptime(request.form['start_date'], '%Y-%m-%d').date()
+            event.end_date = datetime.strptime(request.form['end_date'], '%Y-%m-%d').date()
+            
+            event.category_id = int(request.form['category_id'])
+
+            # DB 세션 커밋 (SQL UPDATE 실행)
+            db.session.commit()
+            
+            # 수정 후 상세 페이지로 리디렉션
+            return redirect(url_for('event_detail', event_id=event.event_id))
+        
+        except Exception as e:
+            db.session.rollback()
+            return f"이벤트 수정 오류 발생: {e}", 500
+
+# 이벤트 삭제 기능 (CRUD의 Delete 기능)
+@app.route('/delete/<int:event_id>', methods=['POST'])
+def event_delete(event_id):
+    # event_id를 사용하여 DB에서 해당 이벤트 레코드를 조회
+    event = Event.query.get_or_404(event_id)
+    
+    try:
+        # DB 세션에서 객체 삭제
+        db.session.delete(event)
+        # DB 커밋 (SQL DELETE 실행)
+        db.session.commit()
+        
+        # 삭제 후 메인 목록 페이지로 리디렉션
+        return redirect(url_for('event_list'))
+        
+    except Exception as e:
+        db.session.rollback()
+        return f"이벤트 삭제 오류 발생: {e}", 500
 
 
 if __name__ == '__main__':
     with app.app_context():
+        # DB 초기화 함수 실행
         init_db()
     
     app.run(debug=True)
