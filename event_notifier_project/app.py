@@ -67,10 +67,16 @@ def init_db():
 @app.route('/')
 def event_list():
     categories = Category.query.all()
-    # 현재는 모든 이벤트를 가져옵니다. 다음 단계에서 날짜 필터링을 추가할 예정입니다.
-    events = Event.query.all() 
-    return render_template('index.html', events=events, categories=categories)
+    # 날짜 기반 동적 쿼리 : 오늘 날짜를 기준으로 종료일이 오늘보다 크거나 같은 이벤트만 조회
+    today = datetime.today().date()
+    events = Event.query.filter(
+        Event.end_date >= today # 종료일이 오늘이거나 미래인 이벤트
+    ).order_by(
+        Event.start_date.asc() # 사직일이 빠른 순서대로 정렬
+    ).all()
 
+    #index.html 템플릿에 데이터 전달
+    return render_template('index.html', events = events, categories = categories)
 
 # 이벤트 등록 페이지 (CRUD의 Create 기능)
 @app.route('/new', methods=['GET', 'POST'])
