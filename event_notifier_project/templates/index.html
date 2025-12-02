@@ -8,18 +8,28 @@
         body { font-family: sans-serif; margin: 40px; background-color: #f4f4f9; }
         .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
         h1 { color: #333; border-bottom: 2px solid #ddd; padding-bottom: 10px; }
+        /* [새 이벤트 등록] 버튼 스타일 */
         .btn-primary { background-color: #007bff; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px; display: inline-block; margin-bottom: 20px; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
         th { background-color: #e9ecef; }
         .no-events { color: #6c757d; padding: 20px; text-align: center; border: 1px dashed #ced4da; margin-top: 20px; }
+        .btn-link { 
+            text-decoration: none; 
+            padding: 4px 8px; 
+            font-size: 0.8em; 
+            border-radius: 3px;
+            background-color: #e9ecef;
+            color: #333;
+            border: 1px solid #ccc;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>기간 한정 이벤트 목록 (CRUD: Read)</h1>
+        <h1>기간 한정 이벤트 목록</h1>
         
-        <!-- CRUD - Create 버튼: 등록 페이지로 이동하는 링크 -->
+        <!-- CRUD - Create 버튼: 등록 페이지로 이동 -->
         <a href="{{ url_for('event_create') }}" class="btn-primary">➕ 새 이벤트 등록</a> 
         
         <!-- CRUD - Read (조회) 기능: 이벤트 목록 테이블 -->
@@ -31,7 +41,7 @@
                         <th>위치</th>
                         <th>카테고리</th>
                         <th>기간</th>
-                        <th>상세</th>
+                        <th>남은 기간</th>
                         <th>관리</th>
                     </tr>
                 </thead>
@@ -40,13 +50,27 @@
                     <tr>
                         <td>{{ event.title }}</td>
                         <td>{{ event.location }}</td>
-                        <!-- Event 모델에서 설정한 관계(backref='category')를 통해 Category 이름을 가져옵니다. -->
+                        <!-- Event 모델에서 설정한 관계를 통해 Category 이름을 가져옵니다. -->
                         <td>{{ event.category.category_name }}</td> 
                         <td>{{ event.start_date.strftime('%Y.%m.%d') }} ~ {{ event.end_date.strftime('%Y.%m.%d') }}</td>
-                        <!-- 상세 페이지 링크는 다음 단계에서 구현 -->
-                        <td><a href="#">[보기]</a></td>
-                        <!-- 수정/삭제 버튼은 다음 단계에서 구현-->
-                        <td>[수정] [삭제]</td> 
+                        
+                        <!-- D-Day 계산 (단순 표시) -->
+                        <td>
+                            {% set time_diff = (event.end_date - today).days %}
+                            {% if time_diff < 0 %}
+                                종료됨
+                            {% elif time_diff == 0 %}
+                                D-Day
+                            {% else %}
+                                D-{{ time_diff }}
+                            {% endif %}
+                        </td>
+                        
+                        <!-- 관리 링크 (상세/수정/삭제 페이지로 이동) -->
+                        <td>
+                            <!-- **수정된 링크:** event_id를 전달하여 해당 이벤트의 상세 페이지로 이동합니다. -->
+                            <a href="{{ url_for('event_detail', event_id=event.event_id) }}" class="btn-link">상세/수정/삭제</a>
+                        </td> 
                     </tr>
                     {% endfor %}
                 </tbody>

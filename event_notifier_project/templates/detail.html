@@ -27,34 +27,67 @@
         .form-group { margin-bottom: 20px; }
 
         /* 버튼 그룹 및 색상 */
-        .button-group { margin-top: 30px; display: flex; gap: 10px; }
-        .btn { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; text-decoration: none; text-align: center;}
-        .btn-edit { background-color: #ffc107; color: #333; }
+        .button-group { 
+            margin-top: 30px; 
+            display: flex; 
+            gap: 10px; 
+            align-items: center; /* 버튼을 세로로 정렬 */
+        }
+        .btn { 
+            padding: 10px 20px; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            font-size: 16px; 
+            text-decoration: none; 
+            text-align: center;
+            height: 40px; 
+            line-height: 20px;
+            box-sizing: border-box;
+            white-space: nowrap; /* 버튼 내용이 줄바꿈되지 않도록 */
+        }
+        .btn-toggle { background-color: #ffc107; color: #333; }
         .btn-delete { background-color: #dc3545; color: white; }
         .btn-save { background-color: #007bff; color: white; }
         .btn-cancel { background-color: #6c757d; color: white; }
+
+        /* 삭제 폼을 인라인 블록으로 만들어 수정 버튼 옆에 배치 */
+        #delete-form {
+            display: inline-block;
+            margin: 0; /* form의 기본 마진 제거 */
+            padding: 0; /* form의 기본 패딩 제거 */
+        }
     </style>
     <script>
-        // JavaScript로 수정 모드를 토글하는 함수
+        // JavaScript를 간소화하여 두 영역의 표시를 토글
         function toggleEditMode() {
-            const displayElements = document.querySelectorAll('.display-mode');
-            const editElements = document.querySelectorAll('.edit-mode');
-            const isEditing = document.getElementById('edit-button').dataset.mode === 'display';
-
-            document.getElementById('edit-button').dataset.mode = isEditing ? 'edit' : 'display';
+            const displayContent = document.getElementById('display-content');
+            const editForm = document.getElementById('edit-form');
+            const toggleButton = document.getElementById('toggle-button');
             
-            displayElements.forEach(el => el.style.display = isEditing ? 'none' : 'block');
-            editElements.forEach(el => elstyle.display = isEditing ? 'block' : 'none');
-            
-            // 버튼 텍스트 변경
-            document.getElementById('edit-button').textContent = isEditing ? '수정 취소' : '이벤트 수정';
+            // 현재 수정 폼이 숨겨져 있다면 (수정 모드 진입)
+            if (editForm.style.display === 'none' || editForm.style.display === '') {
+                displayContent.style.display = 'none';
+                editForm.style.display = 'block';
+                toggleButton.textContent = '수정 취소';
+            } else { // 수정 폼이 표시되어 있다면 (수정 모드 취소)
+                editForm.style.display = 'none';
+                displayContent.style.display = 'block';
+                toggleButton.textContent = '이벤트 수정';
+            }
         }
 
         // 삭제 확인 폼 제출 함수 (경고 메시지 대체)
         function confirmDelete() {
-            // 사용자에게 경고 메시지를 보여주는 대신, 폼을 바로 제출하여 삭제합니다.
+            // 사용자에게 경고 메시지를 보여주는 대신, 폼을 바로 제출하여 삭제
             document.getElementById('delete-form').submit();
         }
+
+        // 페이지 로드 시 수정 폼을 숨김
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('edit-form').style.display = 'none';
+        });
+
     </script>
 </head>
 <body>
@@ -62,7 +95,7 @@
         <h1>{{ event.title }}</h1>
         <p><a href="{{ url_for('event_list') }}">← 목록으로 돌아가기</a></p>
 
-        <!-- Display Mode -->
+        <!-- Display Mode (상세 정보) -->
         <div class="display-mode" id="display-content">
             <div class="detail-group">
                 <label>카테고리</label>
@@ -85,20 +118,23 @@
         <!-- Buttons Group -->
         <div class="button-group">
             <!-- 수정 버튼 (토글 기능) -->
-            <button class="btn btn-edit" id="edit-button" onclick="toggleEditMode()" data-mode="display">이벤트 수정</button>
+            <button class="btn btn-toggle" id="toggle-button" onclick="toggleEditMode()">이벤트 수정</button>
 
             <!-- 삭제 버튼 (Delete Form) -->
-            <form id="delete-form" method="POST" action="{{ url_for('event_delete', event_id=event.event_id) }}" style="display: inline;">
+            <!-- 삭제 버튼도 .btn 스타일을 적용받도록 <button> 태그에 직접 class를 추가 -->
+            <form id="delete-form" method="POST" action="{{ url_for('event_delete', event_id=event.event_id) }}">
                 <button type="button" onclick="confirmDelete()" class="btn btn-delete">🗑️ 이벤트 삭제</button>
             </form>
         </div>
 
         <!-- Edit Mode (수정 폼) -->
-        <form method="POST" action="{{ url_for('event_detail', event_id=event.event_id) }}" style="display: none;" class="edit-mode" id="edit-form">
+        <!-- POST 메서드로 현재 페이지(/<event_id>)에 데이터를 전송하여 수정 로직 실행 -->
+        <form method="POST" action="{{ url_for('event_detail', event_id=event.event_id) }}" class="edit-mode" id="edit-form">
             <h2>이벤트 정보 수정 (CRUD: Update)</h2>
             
             <div class="form-group">
                 <label for="title">제목</label>
+                <!-- value에 현재 이벤트 제목을 미리 채워 넣음 -->
                 <input type="text" id="title" name="title" value="{{ event.title }}" required>
             </div>
 
@@ -106,7 +142,7 @@
                 <label for="category_id">카테고리</label>
                 <select id="category_id" name="category_id" required>
                     {% for cat in categories %}
-                    <!-- 현재 카테고리가 선택되도록 처리 -->
+                    <!-- 현재 카테고리가 선택되도록 'selected' 처리 -->
                     <option value="{{ cat.category_id }}" {% if cat.category_id == event.category_id %}selected{% endif %}>
                         {{ cat.category_name }}
                     </option>
@@ -122,7 +158,7 @@
             <div style="display: flex; gap: 20px;">
                 <div class="form-group" style="flex: 1;">
                     <label for="start_date">시작일</label>
-                    <!-- 날짜 형식 변환: value는 'YYYY-MM-DD' 문자열이어야 함 -->
+                    <!-- value는 'YYYY-MM-DD' 문자열이어야 하므로 strftime 사용 -->
                     <input type="date" id="start_date" name="start_date" value="{{ event.start_date.strftime('%Y-%m-%d') }}" required>
                 </div>
                 <div class="form-group" style="flex: 1;">
@@ -136,8 +172,10 @@
                 <textarea id="description" name="description">{{ event.description or '' }}</textarea>
             </div>
             
-            <button type="submit" class="btn btn-save">💾 수정 사항 저장</button>
-            <button type="button" class="btn btn-cancel" onclick="toggleEditMode()">취소</button>
+            <div class="button-group">
+                <button type="submit" class="btn btn-save">💾 수정 사항 저장</button>
+                <button type="button" class="btn btn-cancel" onclick="toggleEditMode()">취소</button>
+            </div>
         </form>
 
     </div>
