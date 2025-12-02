@@ -27,12 +27,36 @@
         .form-group { margin-bottom: 20px; }
 
         /* 버튼 그룹 및 색상 */
-        .button-group { margin-top: 30px; display: flex; gap: 10px; }
-        .btn { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; text-decoration: none; text-align: center;}
+        .button-group { 
+            margin-top: 30px; 
+            display: flex; 
+            gap: 10px; 
+            align-items: center; /* 버튼을 세로로 정렬 */
+        }
+        .btn { 
+            padding: 10px 20px; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            font-size: 16px; 
+            text-decoration: none; 
+            text-align: center;
+            height: 40px; 
+            line-height: 20px;
+            box-sizing: border-box;
+            white-space: nowrap; /* 버튼 내용이 줄바꿈되지 않도록 */
+        }
         .btn-toggle { background-color: #ffc107; color: #333; }
         .btn-delete { background-color: #dc3545; color: white; }
         .btn-save { background-color: #007bff; color: white; }
         .btn-cancel { background-color: #6c757d; color: white; }
+
+        /* 삭제 폼을 인라인 블록으로 만들어 수정 버튼 옆에 배치 */
+        #delete-form {
+            display: inline-block;
+            margin: 0; /* form의 기본 마진 제거 */
+            padding: 0; /* form의 기본 패딩 제거 */
+        }
     </style>
     <script>
         // JavaScript를 간소화하여 두 영역의 표시를 토글
@@ -97,14 +121,14 @@
             <button class="btn btn-toggle" id="toggle-button" onclick="toggleEditMode()">이벤트 수정</button>
 
             <!-- 삭제 버튼 (Delete Form) -->
-            <!-- 이 폼은 삭제 요청을 위해 POST 메서드로 /delete/<id> 라우트로 전송 -->
-            <form id="delete-form" method="POST" action="{{ url_for('event_delete', event_id=event.event_id) }}" style="display: inline;">
+            <!-- 삭제 버튼도 .btn 스타일을 적용받도록 <button> 태그에 직접 class를 추가 -->
+            <form id="delete-form" method="POST" action="{{ url_for('event_delete', event_id=event.event_id) }}">
                 <button type="button" onclick="confirmDelete()" class="btn btn-delete">🗑️ 이벤트 삭제</button>
             </form>
         </div>
 
         <!-- Edit Mode (수정 폼) -->
-        <!-- POST 메서드로 현재 페이지(/<event_id>)에 데이터를 전송하여 수정 로직을 실행 -->
+        <!-- POST 메서드로 현재 페이지(/<event_id>)에 데이터를 전송하여 수정 로직 실행 -->
         <form method="POST" action="{{ url_for('event_detail', event_id=event.event_id) }}" class="edit-mode" id="edit-form">
             <h2>이벤트 정보 수정 (CRUD: Update)</h2>
             
@@ -148,8 +172,10 @@
                 <textarea id="description" name="description">{{ event.description or '' }}</textarea>
             </div>
             
-            <button type="submit" class="btn btn-save">💾 수정 사항 저장</button>
-            <button type="button" class="btn btn-cancel" onclick="toggleEditMode()">취소</button>
+            <div class="button-group">
+                <button type="submit" class="btn btn-save">💾 수정 사항 저장</button>
+                <button type="button" class="btn btn-cancel" onclick="toggleEditMode()">취소</button>
+            </div>
         </form>
 
     </div>
