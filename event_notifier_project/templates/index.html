@@ -5,23 +5,44 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>지역/기간 한정 이벤트 알림 웹</title>
     <style>
+        /* CSS는 가독성과 명확성에 중점 */
         body { font-family: sans-serif; margin: 40px; background-color: #f4f4f9; }
-        .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+        /* 컨테이너 너비 확대: 900px -> 1100px */
+        .container { max-width: 1100px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
         h1 { color: #333; border-bottom: 2px solid #ddd; padding-bottom: 10px; }
-        /* [새 이벤트 등록] 버튼 스타일 */
+        
         .btn-primary { background-color: #007bff; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px; display: inline-block; margin-bottom: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; table-layout: fixed; } /* 테이블 레이아웃 고정 */
+        
+        th, td { 
+            border: 1px solid #ddd; 
+            padding: 10px; 
+            text-align: left;
+            /* 셀 내용이 길어도 강제로 줄바꿈하지 않도록 설정 */
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+            white-space: nowrap; 
+        }
         th { background-color: #e9ecef; }
+
+        /* 특정 컬럼 너비 재지정 */
+        th:nth-child(1) { width: 30%; } /* 제목 (더 넓게) */
+        th:nth-child(2) { width: 25%; } /* 위치 (더 넓게) */
+        th:nth-child(5) { width: 10%; } /* 관리 (버튼 전용) */
+
         .no-events { color: #6c757d; padding: 20px; text-align: center; border: 1px dashed #ced4da; margin-top: 20px; }
+        
+        /* 버튼 크기 최소화 */
         .btn-link { 
             text-decoration: none; 
-            padding: 4px 8px; 
-            font-size: 0.8em; 
+            padding: 2px 6px;
+            font-size: 0.9em; 
             border-radius: 3px;
             background-color: #e9ecef;
             color: #333;
             border: 1px solid #ccc;
+            white-space: nowrap;
         }
     </style>
 </head>
@@ -40,7 +61,6 @@
                         <th>제목</th>
                         <th>위치</th>
                         <th>카테고리</th>
-                        <th>기간</th>
                         <th>남은 기간</th>
                         <th>관리</th>
                     </tr>
@@ -50,10 +70,10 @@
                     <tr>
                         <td>{{ event.title }}</td>
                         <td>{{ event.location }}</td>
-                        <!-- Event 모델에서 설정한 관계를 통해 Category 이름을 가져옵니다. -->
+                        <!-- Event 모델에서 설정한 관계를 통해 Category 이름을 가져옴 -->
                         <td>{{ event.category.category_name }}</td> 
-                        <td>{{ event.start_date.strftime('%Y.%m.%d') }} ~ {{ event.end_date.strftime('%Y.%m.%d') }}</td>
                         
+                        <!-- [수정됨] 기간 열을 제거하고 남은 기간 열만 남김 -->
                         <!-- D-Day 계산 (단순 표시) -->
                         <td>
                             {% set time_diff = (event.end_date - today).days %}
@@ -68,8 +88,7 @@
                         
                         <!-- 관리 링크 (상세/수정/삭제 페이지로 이동) -->
                         <td>
-                            <!-- **수정된 링크:** event_id를 전달하여 해당 이벤트의 상세 페이지로 이동합니다. -->
-                            <a href="{{ url_for('event_detail', event_id=event.event_id) }}" class="btn-link">상세/수정/삭제</a>
+                            <a href="{{ url_for('event_detail', event_id=event.event_id) }}" class="btn-link">상세</a>
                         </td> 
                     </tr>
                     {% endfor %}
