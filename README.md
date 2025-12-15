@@ -106,7 +106,7 @@ source venv/bin/activate   # Windows: venv\Scripts\activate
 
 ```bash
 pip install flask
-pip install flaskalchemy
+pip install flask_sqlalchemy
 ```
 ### 3. 애플리케이션 실행
 
